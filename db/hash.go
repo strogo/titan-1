@@ -117,8 +117,10 @@ func NewHash(txn *Transaction, key []byte) *Hash {
 
 //hashItemKey spits field into metakey
 func hashItemKey(key []byte, field []byte) []byte {
-	key = append(key, ':')
-	return append(key, field...)
+	var dkey []byte
+	dkey = append(dkey, key...)
+	dkey = append(dkey, ':')
+	return append(dkey, field...)
 }
 
 //SlotGC adds slotKey to GC remove queue
@@ -253,11 +255,10 @@ func (hash *Hash) HSetNX(field []byte, value []byte) (int, error) {
 	ikey := hashItemKey(dkey, field)
 
 	_, err := hash.txn.t.Get(ikey)
-	if err != nil {
-		if !IsErrNotFound(err) {
-			return 0, err
-		}
+	if err == nil {
 		return 0, nil
+	} else if !IsErrNotFound(err) {
+		return 0, err
 	}
 	if err := hash.txn.t.Set(ikey, value); err != nil {
 		return 0, err
@@ -453,7 +454,7 @@ func (hash *Hash) HMGet(fields [][]byte) ([][]byte, error) {
 }
 
 // HMSet sets the specified fields to their respective values in the hash stored at key
-func (hash *Hash) HMSet(fields [][]byte, values [][]byte) error {
+func (hash *Hash) HMSet(fields, values [][]byte) error {
 	added := int64(0)
 	oldValues, err := hash.HMGet(fields)
 	if err != nil {
